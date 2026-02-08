@@ -1,0 +1,59 @@
+
+---
+
+## `.gitignore`
+
+```gitignore
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.pkl
+*.log
+*.sqlite3
+
+# ---- Virtual environments ----
+venv/
+.venv/
+env/
+ENV/
+
+# ---- Packaging / build ----
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ---- Test / coverage ----
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# ---- IDE / editors ----
+.vscode/
+.idea/
+*.iml
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+
+# ---- Env / secrets ----
+.env
+.env.*
+*.pem
+*.key
+*.crt
+
+# ---- Audio / media artifacts ----
+*.wav
+*.mp3
+*.m4a
+*.ogg
+*.flac
+
+
+# ---- Jupyter ----
+.ipynb_checkpoints/
