@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoeusAI Chat</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom Scrollbar for sleek look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+        /* Typing cursor animation */
+        .cursor-blink {
+            display: inline-block;
+            width: 6px;
+            height: 18px;
+            background-color: #cbd5e1;
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+            margin-left: 2px;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* Markdown Styles within Bot Message */
+        .prose pre { background: #111827; padding: 10px; border-radius: 6px; overflow-x: auto; }
+        .prose code { color: #e5e7eb; font-family: monospace; }
+        .prose p { margin-bottom: 0.5em; }
+        .prose p:last-child { margin-bottom: 0; }
+        .prose ul { list-style-type: disc; padding-left: 1.5em; }
+    </style>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            750: '#2d3748',
+                            850: '#1a202c',
+                            950: '#0d1117',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-900 text-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <header class="bg-gray-850 border-b border-gray-800 p-4 flex items-center justify-between shadow-md z-10">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/30">
+                C
+            </div>
+            <div>
+                <h1 class="font-semibold text-lg tracking-tight">CoeusAI</h1>
+                <p class="text-xs text-gray-400 flex items-center gap-1">
+                    <span id="status-dot" class="w-2 h-2 rounded-full bg-red-500"></span>
+                    <span id="status-text">Disconnected</span>
+                </p>
+            </div>
+        </div>
+        <button onclick="reconnect()" class="text-xs text-gray-400 hover:text-white underline decoration-dotted">
+            Reconnect
+        </button>
+    </header>
+
+    <main id="chat-container" class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scroll-smooth">
+        <div class="flex gap-4 max-w-3xl mx-auto opacity-70">
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-xs">AI</div>
+            <div class="bg-gray-800 p-4 rounded-2xl rounded-tl-none border border-gray-700 shadow-sm">
+                <p class="text-sm leading-relaxed text-gray-200">Hello! I'm CoeusAI. Send a message to start chatting, or type "ping" to check connection health.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-850 p-4 border-t border-gray-800">
+        <div class="max-w-3xl mx-auto relative">
+            <form id="chat-form" class="relative flex items-end gap-2 bg-gray-750 p-2 rounded-xl border border-gray-600 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all shadow-lg">
+                <textarea 
+                    id="message-input" 
+                    rows="1" 
+                    class="w-full bg-transparent text-white placeholder-gray-400 text-sm px-3 py-3 focus:outline-none resize-none max-h-32"
+                    placeholder="Message CoeusAI..."
+                    oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"
+                    onkeydown="handleEnter(event)"
+                ></textarea>
+                <button type="button" id="send-btn" onclick="sendMessage()" class="p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </form>
+            <p class="text-center text-[10px] text-gray-500 mt-2">AI generates responses via WebSocket streaming.</p>
+        </div>
+    </footer>
+
+    <script>
+        const wsUrl = "ws://localhost:8000/chat/ws"; // Adjust if port differs
+        let socket;
+        let currentBotMessageDiv = null;
+        let currentBotContent = "";
+        let isGenerating = false;
+
+        const chatContainer = document.getElementById('chat-container');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const input = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+
+        function connect() {
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                statusDot.classList.replace('bg-red-500', 'bg-green-500');
+                statusText.innerText = "Connected";
+                input.disabled = false;
+                sendBtn.disabled = false;
+            };
+
+            socket.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+
+                // Handle Streaming Delta
+                if (data.delta) {
+                    if (!currentBotMessageDiv) createBotMessageBubble();
+                    currentBotContent += data.delta;
+                    updateBotMessage(currentBotContent, true);
+                    scrollToBottom();
+                } 
+                // Handle Final Full Message (Replacing stream to ensure integrity)
+                else if (data.message) {
+                    // If we were streaming, finalize the stream
+                    if (currentBotMessageDiv && isGenerating) {
+                        currentBotContent = data.message; // Use backend's final joined string
+                        updateBotMessage(currentBotContent, false);
+                        finalizeBotMessage();
+                    } else if (!isGenerating) {
+                        // System messages (like "connected")
+                        if(data.message !== "connected") { // Don't print "connected" as a chat bubble
+                            createSystemMessage(data.message);
+                        }
+                    }
+                }
+                // Handle Pong/Health
+                else if (data.type === 'pong' || data.type === 'health') {
+                    createSystemMessage(`System: ${data.status.toUpperCase()}`);
+                }
+            };
+
+            socket.onclose = () => {
+                statusDot.classList.replace('bg-green-500', 'bg-red-500');
+                statusText.innerText = "Disconnected";
+                input.disabled = true;
+                sendBtn.disabled = true;
+                if (isGenerating) finalizeBotMessage(); 
+            };
+
+            socket.onerror = (error) => {
+                console.error("WebSocket Error:", error);
+                statusText.innerText = "Error";
+            };
+        }
+
+        function reconnect() {
+            if (socket) socket.close();
+            connect();
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const text = input.value.trim();
+            if (!text || socket.readyState !== WebSocket.OPEN) return;
+
+            // Add User Message
+            const userDiv = document.createElement('div');
+            userDiv.className = "flex gap-4 max-w-3xl mx-auto flex-row-reverse";
+            userDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center text-xs">You</div>
+                <div class="bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none shadow-md max-w-[80%]">
+                    <p class="text-sm whitespace-pre-wrap leading-relaxed">${escapeHtml(text)}</p>
+                </div>
+            `;
+            chatContainer.appendChild(userDiv);
+
+            // Reset Input
+            input.value = "";
+            input.style.height = "auto";
+            scrollToBottom();
+
+            // Prepare for Bot Response
+            socket.send(text);
+            isGenerating = true;
+            currentBotContent = "";
+            currentBotMessageDiv = null;
+        }
+
+        function createBotMessageBubble() {
+            const botDiv = document.createElement('div');
+            botDiv.className = "flex gap-4 max-w-3xl mx-auto";
+            botDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-xs shadow-lg shadow-blue-500/30">AI</div>
+                <div class="bg-gray-800 p-4 rounded-2xl rounded-tl-none border border-gray-700 shadow-sm max-w-[85%] w-full">
+                    <div class="prose prose-invert prose-sm max-w-none text-gray-200 markdown-content"></div>
+                    <span class="cursor-blink"></span>
+                </div>
+            `;
+            chatContainer.appendChild(botDiv);
+            currentBotMessageDiv = botDiv;
+        }
+
+        function updateBotMessage(text, showCursor) {
+            if (!currentBotMessageDiv) return;
+            const contentDiv = currentBotMessageDiv.querySelector('.markdown-content');
+            const cursor = currentBotMessageDiv.querySelector('.cursor-blink');
+            
+            // Render Markdown
+            contentDiv.innerHTML = marked.parse(text);
+            
+            cursor.style.display = showCursor ? 'inline-block' : 'none';
+        }
+
+        function finalizeBotMessage() {
+            isGenerating = false;
+            if (currentBotMessageDiv) {
+                const cursor = currentBotMessageDiv.querySelector('.cursor-blink');
+                if (cursor) cursor.remove();
+            }
+            currentBotMessageDiv = null;
+            currentBotContent = "";
+        }
+
+        function createSystemMessage(text) {
+            const div = document.createElement('div');
+            div.className = "text-center text-xs text-gray-500 my-4";
+            div.innerText = text;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+
+        // Initialize connection
+        connect();
+    </script>
+</body>
+</html>
