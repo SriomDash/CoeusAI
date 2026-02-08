@@ -70,7 +70,10 @@ async def chat_ws(websocket: WebSocket):
 
                     await websocket.send_json({"message": "".join(chunks)})
 
-                except Exception:
+                except Exception as e:
+                    print(f"❌ LLM ERROR: {e}")  
+                    import traceback
+                    traceback.print_exc()
                     await websocket.send_json({"message": "connection lost"})
                     await websocket.close(code=1011)
                     return

@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     max_input_chars: int = Field(4000, alias="MAX_INPUT_CHARS")
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file="backend/.env",
         env_file_encoding="utf-8",
         extra="ignore",
     )
