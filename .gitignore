@@ -42,7 +42,6 @@ Thumbs.db
 
 # ---- Env / secrets ----
 .env
-.env.*
 *.pem
 *.key
 *.crt
