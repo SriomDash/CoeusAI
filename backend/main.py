@@ -12,6 +12,7 @@ from backend.clients.supabase_client import supabase_bus
 from backend.clients.chroma_client import chroma_bus
 
 from backend.routers.user import user_router
+from backend.routers.upload import upload_router
 # --- Logging Setup ---
 logging.basicConfig(
     level=logging.INFO,
@@ -87,3 +88,4 @@ async def health_check() -> JSONResponse:
     )
 
 app.include_router(user_router)
+app.include_router(upload_router)

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { registerUser } from "./services/api"; // Path to your api.js
+import { useNavigate } from "react-router-dom";
+import { registerUser } from "./services/api";
 
 const COEUS_SRC = "/coeus.png";
 
@@ -56,6 +57,8 @@ function Sparkles({ count = 16 }) {
 }
 
 export default function CoeusHome() {
+  const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [touched, setTouched] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -70,24 +73,28 @@ export default function CoeusHome() {
   }, []);
 
   const handleStart = async () => {
-    if (!canStart || loading) return;
-    
     setTouched(true);
+    if (!canStart || loading) return;
+
     setLoading(true);
     setError("");
 
     try {
-      // 1. Register user in Supabase via FastAPI
+      // Register user in your backend (FastAPI -> Supabase)
       const response = await registerUser(cleanName);
-      
-      // 2. Persist details for the upload page
+
+      // Save for later pages
       localStorage.setItem("coeus_name", cleanName);
-      localStorage.setItem("coeus_user_id", response.user.id); // The UUID from DB
-      
-      // 3. Navigate
-      window.location.href = "/upload";
+
+      // If backend returns something like: { user: { id: "uuid" } }
+      if (response?.user?.id) {
+        localStorage.setItem("coeus_user_id", response.user.id);
+      }
+
+      // Go to upload page
+      navigate("/upload");
     } catch (err) {
-      setError(err.message || "Server connection failed.");
+      setError(err?.message || "Server connection failed.");
     } finally {
       setLoading(false);
     }
@@ -109,7 +116,7 @@ export default function CoeusHome() {
               animate={{ opacity: 1, y: 0 }}
               className="inline-flex items-center gap-2 self-start rounded-full border border-[#e2e8f0] bg-white px-4 py-2 shadow-sm"
             >
-              <span className="h-2 w-2 rounded-full bg-[#ea4e59]" />
+              <span className="h-2 w-2 rounded-full bg-blue-600" />
               <span className="text-sm font-semibold text-[#64748b]">
                 Coeus • Chat with your PDFs
               </span>
@@ -136,7 +143,7 @@ export default function CoeusHome() {
               animate={{ opacity: 1, y: 0 }}
               className="mt-8 rounded-[24px] border border-[#e2e8f0] bg-white p-6 shadow-sm"
             >
-              <div className="mb-2 text-xs font-bold uppercase tracking-widest text-[#ea4e59]">
+              <div className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-600">
                 Start here
               </div>
 
@@ -151,7 +158,7 @@ export default function CoeusHome() {
                     disabled={loading}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Enter your name"
-                    className="w-full rounded-[10px] border bg-[#f8fafc] px-4 py-3 text-base outline-none focus:border-[#ea4e59]"
+                    className="w-full rounded-[10px] border border-[#e2e8f0] bg-[#f8fafc] px-4 py-3 text-base outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#64748b]">
                     {cleanName.length}/24
@@ -166,7 +173,7 @@ export default function CoeusHome() {
                   className={[
                     "rounded-[10px] px-6 py-3 font-semibold transition-all",
                     canStart && !loading
-                      ? "bg-[#ea4e59] text-white shadow hover:bg-[#d9444f]"
+                      ? "bg-blue-600 text-white shadow hover:bg-blue-700"
                       : "bg-[#e2e8f0] text-[#64748b] cursor-not-allowed",
                   ].join(" ")}
                 >
@@ -179,7 +186,7 @@ export default function CoeusHome() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className={`mt-3 text-sm ${error ? 'text-red-500' : 'text-[#64748b]'}`}
+                    className={`mt-3 text-sm ${error ? "text-red-500" : "text-[#64748b]"}`}
                   >
                     {error || "Please enter at least 2 characters."}
                   </motion.div>
@@ -196,12 +203,18 @@ export default function CoeusHome() {
                 className="relative rounded-[24px] border border-[#e2e8f0] bg-white p-6 shadow-sm overflow-hidden"
               >
                 <Sparkles count={18} />
+
                 <div className="relative flex flex-col items-center justify-center">
                   <motion.img
                     src={COEUS_SRC}
                     alt="Coeus mascot"
                     className="select-none"
-                    style={{ width: 220, height: "auto" }}
+                    draggable={false}
+                    style={{
+                      width: 220,
+                      height: "auto",
+                      imageRendering: "pixelated",
+                    }}
                     animate={{ y: [0, -10, 0], rotate: [-1, 1, -1] }}
                     transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
                   />
@@ -211,7 +224,10 @@ export default function CoeusHome() {
                   </div>
                 </div>
               </motion.div>
-              <div className="mt-4 text-center text-xs text-[#64748b]">© {new Date().getFullYear()} Coeus</div>
+
+              <div className="mt-4 text-center text-xs text-[#64748b]">
+                © {new Date().getFullYear()} Coeus
+              </div>
             </div>
           </div>
         </div>
