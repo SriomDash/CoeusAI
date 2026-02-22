@@ -1,0 +1,59 @@
+# --- Python / Backend ---
+# Virtual Environments
+venv/
+.venv/
+coeusAI/
+env/
+ENV/
+
+# Python Caches & Compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# Local Databases (ChromaDB)
+# We ignore the actual data so it doesn't bloat your Git repo
+chroma_db/
+*.db
+*.sqlite3
+
+# --- Node / Frontend ---
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Production Builds
+dist/
+build/
+frontend/dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# --- Security & Environment ---
+# Critical: Never commit your API keys
+.env
+.env.local
+.env.*.local
+
+# --- IDE & OS Specific ---
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# macOS / Windows system files
+.DS_Store
+Thumbs.db
+
+# --- Project Specific ---
+# Ignore uploaded PDFs during local testing
+backend/uploads/
