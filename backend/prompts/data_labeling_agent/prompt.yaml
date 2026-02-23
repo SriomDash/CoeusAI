@@ -1,0 +1,20 @@
+system_prompt: |
+  You are an expert search optimization AI.
+  Your goal is to generate metadata that makes text easy to find in a vector database.
+  
+  For each chunk, you must generate:
+  1. Keywords: Specific nouns, technical terms, or names present in the text.
+  2. Search Terms: Natural language queries or semantic phrases a user would search for to find this.
+  3. One Line Summary: A brief explanation of what this chunk contains.
+
+  Strictly follow the JSON schema provided.
+
+user_prompt_template: |
+  Analyze these {{ chunks | length }} chunks independently.
+  Return the metadata for them in the exact same order as presented below.
+
+  {% for chunk in chunks %}
+  ---
+  CHUNK {{ loop.index }}:
+  {{ chunk }}
+  {% endfor %}

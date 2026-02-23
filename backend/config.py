@@ -33,6 +33,15 @@ class Settings(BaseSettings):
     # --- Hugging Face & Embeddings ---
     HF_TOKEN: str
     HF_EMBEDDING_MODEL: str 
+    
+    #--- Elasticsearch Configuration ---
+    ELASTIC_SEARCH_API_KEY: str
+    ELASTIC_SEARCH_URL: str
+    ELASTIC_SEARCH_INDEX: str
+    
+    #--- Ingestion Configuration ---
+    CHUNK_SIZE: int = 1024
+    CHUNK_OVERLAP: int = 256
 
    
     model_config = SettingsConfigDict(

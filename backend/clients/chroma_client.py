@@ -3,7 +3,6 @@ from backend.config import settings
 
 class ChromaClient:
     def __init__(self):
-        # Persistent local storage
         self.client = chromadb.PersistentClient(path="./chroma_db")
     
     def get_collection(self, name: str):

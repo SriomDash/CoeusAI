@@ -6,7 +6,7 @@ from backend.config import settings
 
 upload_router = APIRouter(
     prefix="/upload",
-    tags=["Upload"]
+    tags=["Uploads"]
 )
 
 @upload_router.post("/")
