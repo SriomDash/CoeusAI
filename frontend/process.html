@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coeus AI - Start Processing</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7fa;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 520px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+    p {
+      margin: 0 0 20px;
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .meta {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    button {
+      width: 100%;
+      border: none;
+      background: #ea4e59;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #d9444f; }
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .secondary {
+      margin-top: 12px;
+      background: #0f172a;
+    }
+    .secondary:hover { background: #1e293b; }
+    .ask-btn {
+      margin-top: 12px;
+      background: #16a34a;
+      display: none;
+    }
+    .ask-btn:hover { background: #15803d; }
+    .result {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      display: none;
+    }
+    .success {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    .error {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Start Processing</h1>
+    <p>Review the stored upload details and click the button to start the ingestion graph.</p>
+
+    <div class="meta" id="metaBox"></div>
+
+    <button id="processBtn">Start Processing</button>
+    <button id="askBtn" class="ask-btn" type="button">Go to Ask Questions</button>
+    <button id="backBtn" class="secondary" type="button">Back to Upload Page</button>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    const API_V1 = "http://127.0.0.1:8000/api/v1";
+
+    const userId = localStorage.getItem("user_id");
+    const userName = localStorage.getItem("user_name");
+    const uploadId = localStorage.getItem("upload_id");
+    const filename = localStorage.getItem("filename");
+
+    const metaBox = document.getElementById("metaBox");
+    const processBtn = document.getElementById("processBtn");
+    const askBtn = document.getElementById("askBtn");
+    const backBtn = document.getElementById("backBtn");
+    const resultBox = document.getElementById("result");
+
+    function showResult(message, ok) {
+      resultBox.style.display = "block";
+      resultBox.className = `result ${ok ? "success" : "error"}`;
+      resultBox.textContent = message;
+    }
+
+    async function parseError(response) {
+      try {
+        const data = await response.json();
+        if (typeof data?.detail === "string") return data.detail;
+        if (Array.isArray(data?.detail)) return JSON.stringify(data.detail, null, 2);
+        if (data?.message) return data.message;
+        return JSON.stringify(data, null, 2);
+      } catch {
+        return await response.text();
+      }
+    }
+
+    function renderMeta() {
+      const storedDocumentId = localStorage.getItem("document_id");
+
+      metaBox.innerHTML = `
+        <strong>User ID:</strong> ${userId || "-"}<br>
+        <strong>User Name:</strong> ${userName || "-"}<br>
+        <strong>Upload ID:</strong> ${uploadId || "-"}<br>
+        <strong>File:</strong> ${filename || "-"}<br>
+        <strong>Document ID:</strong> ${storedDocumentId || "-"}
+      `;
+    }
+
+    renderMeta();
+
+    if (!userId || !userName || !uploadId) {
+      showResult("Missing user or upload data. Please go back and upload again.", false);
+      processBtn.disabled = true;
+    }
+
+    processBtn.addEventListener("click", async () => {
+      resultBox.style.display = "none";
+      askBtn.style.display = "none";
+      processBtn.disabled = true;
+
+      try {
+        const url = new URL(`${API_V1}/ingest/${uploadId}/run`);
+        url.searchParams.set("user_id", userId);
+        url.searchParams.set("user_name", userName);
+
+        const response = await fetch(url.toString(), {
+          method: "POST"
+        });
+
+        if (!response.ok) {
+          throw new Error(await parseError(response));
+        }
+
+        const data = await response.json();
+
+        if (data?.document_id) {
+          localStorage.setItem("document_id", data.document_id);
+        }
+
+        if (data?.job_id) {
+          localStorage.setItem("job_id", data.job_id);
+        }
+
+        renderMeta();
+        askBtn.style.display = "block";
+
+        showResult(
+          `Processing completed successfully.\n\n${JSON.stringify(data, null, 2)}`,
+          true
+        );
+
+      } catch (error) {
+        showResult(`Processing failed.\n\n${error.message}`, false);
+      } finally {
+        processBtn.disabled = false;
+      }
+    });
+
+    askBtn.addEventListener("click", () => {
+      window.location.href = "ask.html";
+    });
+
+    backBtn.addEventListener("click", () => {
+      window.location.href = "index.html";
+    });
+  </script>
+</body>
+</html>

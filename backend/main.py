@@ -8,13 +8,14 @@ from backend.config import settings
 from backend.clients.groq_client import groq_bus
 from backend.clients.gemini_client import gemini_bus
 from backend.clients.cohere_client import co_bus
-from backend.clients.supabase_client import supabase_bus
 from backend.clients.chroma_client import chroma_bus
 from backend.clients.elastic_search_client import elastic_bus
 
 from backend.routers.user import user_router
 from backend.routers.upload import upload_router
 from backend.routers.ingest import ingest_router
+from backend.routers.retrieval import router as retrieval_router
+from backend.routers.chat import router as chat_router
 
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -60,7 +61,6 @@ async def lifespan(app: FastAPI):
         app.state.groq = groq_bus
         app.state.gemini = gemini_bus
         app.state.cohere = co_bus
-        app.state.supabase = supabase_bus
         app.state.chroma = chroma_bus
         app.state.elastic = elastic_bus
 
@@ -110,7 +110,7 @@ async def root() -> JSONResponse:
 
 @app.get("/health", tags=["Health"])
 async def health_check() -> JSONResponse:
-    required_clients = ['groq', 'gemini', 'cohere', 'supabase', 'chroma', 'elastic']
+    required_clients = ['groq', 'gemini', 'cohere', 'chroma', 'elastic']
     buses_loaded = all(hasattr(app.state, client) for client in required_clients)
 
     es_ping = False
@@ -137,3 +137,5 @@ async def health_check() -> JSONResponse:
 app.include_router(user_router, prefix="/api/v1")
 app.include_router(upload_router, prefix="/api/v1")
 app.include_router(ingest_router, prefix="/api/v1")
+app.include_router(retrieval_router, prefix="/api/v1")
+app.include_router(chat_router)

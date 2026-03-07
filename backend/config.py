@@ -2,7 +2,7 @@ from typing import List
 from functools import lru_cache
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+import os
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 ENV_FILE_PATH = ROOT_DIR / ".env"
@@ -29,7 +29,8 @@ class Settings(BaseSettings):
 
     # --- Cohere Configuration ---
     CO_API_KEY: str 
-
+    COHERE_RERANK_MODEL: str 
+    
     # --- Hugging Face & Embeddings ---
     HF_TOKEN: str
     HF_EMBEDDING_MODEL: str 
@@ -43,7 +44,12 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = 1024
     CHUNK_OVERLAP: int = 256
 
-   
+    # --- LangSmith Tracing Configuration ---
+    LANGSMITH_TRACING: bool 
+    LANGSMITH_ENDPOINT: str 
+    LANGSMITH_API_KEY: str
+    LANGSMITH_PROJECT: str 
+
     model_config = SettingsConfigDict(
         env_file=".env", 
         env_file_encoding="utf-8",

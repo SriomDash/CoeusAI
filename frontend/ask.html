@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ask Questions</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7fa;
+      color: #1e293b;
+      min-height: 100vh;
+      padding: 32px 20px;
+    }
+
+    .container {
+      max-width: 950px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    p {
+      color: #64748b;
+      margin-top: 0;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #dbe3ec;
+      border-radius: 10px;
+      font-size: 14px;
+      box-sizing: border-box;
+      background: #f8fafc;
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    button {
+      background: #ea4e59;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    button:hover {
+      background: #d9444f;
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+
+    .secondary-btn {
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+
+    .secondary-btn:hover {
+      background: #cfd8e3;
+    }
+
+    .dark-btn {
+      background: #0f172a;
+    }
+
+    .dark-btn:hover {
+      background: #1e293b;
+    }
+
+    .status {
+      margin-top: 12px;
+      font-weight: 600;
+    }
+
+    .output-section {
+      margin-top: 20px;
+    }
+
+    .answer-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      min-height: 80px;
+    }
+
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 14px;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .used-chunk {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .muted {
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 700px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ask Questions</h1>
+    <p>Query your indexed PDF content through the retrieval graph.</p>
+
+    <div class="card">
+      <label for="apiBase">Backend Base URL</label>
+      <input id="apiBase" type="text" value="http://127.0.0.1:8000" />
+
+      <div class="grid">
+        <div>
+          <label for="userId">User ID</label>
+          <input id="userId" type="text" placeholder="Enter user_id" />
+        </div>
+
+        <div>
+          <label for="documentId">Document ID (optional)</label>
+          <input id="documentId" type="text" placeholder="Optional document filter" />
+        </div>
+      </div>
+
+      <label for="source">Source filename (optional)</label>
+      <input id="source" type="text" placeholder="Optional source filter, e.g. refund_policy.pdf" />
+
+      <label for="query">Question</label>
+      <textarea id="query" placeholder="Ask something like: How long does refund processing take?"></textarea>
+
+      <div class="button-row">
+        <button id="askBtn">Ask Question</button>
+        <button id="clearBtn" class="secondary-btn" type="button">Clear Output</button>
+        <button id="backBtn" class="dark-btn" type="button">Back to Process Page</button>
+      </div>
+
+      <div id="status" class="status"></div>
+    </div>
+
+    <div class="card output-section">
+      <h2>Final Answer</h2>
+      <div id="answer" class="answer-box">No answer yet.</div>
+    </div>
+
+    <div class="card output-section">
+      <h2>Used Chunks</h2>
+      <div id="usedChunks">
+        <div class="muted">No chunks yet.</div>
+      </div>
+    </div>
+
+    <div class="card output-section">
+      <h2>Debug Output</h2>
+      <pre id="debugOutput">{}</pre>
+    </div>
+  </div>
+
+  <script>
+    const askBtn = document.getElementById("askBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const backBtn = document.getElementById("backBtn");
+    const statusEl = document.getElementById("status");
+    const answerEl = document.getElementById("answer");
+    const usedChunksEl = document.getElementById("usedChunks");
+    const debugOutputEl = document.getElementById("debugOutput");
+
+    function renderUsedChunks(chunks) {
+      if (!chunks || !chunks.length) {
+        usedChunksEl.innerHTML = '<div class="muted">No chunks used.</div>';
+        return;
+      }
+
+      usedChunksEl.innerHTML = chunks.map(chunk => `
+        <div class="used-chunk">
+          <div><strong>chunk_id:</strong> ${chunk.chunk_id || ""}</div>
+          <div><strong>document_id:</strong> ${chunk.document_id || ""}</div>
+          <div><strong>source:</strong> ${chunk.source || ""}</div>
+          <div><strong>page:</strong> ${chunk.page ?? ""}</div>
+          <div><strong>chunk_index:</strong> ${chunk.chunk_index ?? ""}</div>
+          <div><strong>rerank_score:</strong> ${chunk.rerank_score ?? ""}</div>
+        </div>
+      `).join("");
+    }
+
+    function clearOutput() {
+      statusEl.textContent = "";
+      answerEl.textContent = "No answer yet.";
+      usedChunksEl.innerHTML = '<div class="muted">No chunks yet.</div>';
+      debugOutputEl.textContent = "{}";
+    }
+
+    async function parseError(response) {
+      try {
+        const data = await response.json();
+        if (typeof data?.detail === "string") return data.detail;
+        if (Array.isArray(data?.detail)) return JSON.stringify(data.detail, null, 2);
+        if (data?.message) return data.message;
+        return JSON.stringify(data, null, 2);
+      } catch {
+        return await response.text();
+      }
+    }
+
+    window.addEventListener("load", () => {
+      const savedUserId = localStorage.getItem("user_id");
+      const savedDocumentId = localStorage.getItem("document_id");
+      const savedFilename = localStorage.getItem("filename");
+
+      if (savedUserId) {
+        document.getElementById("userId").value = savedUserId;
+      }
+
+      if (savedDocumentId) {
+        document.getElementById("documentId").value = savedDocumentId;
+      }
+
+      if (savedFilename) {
+        document.getElementById("source").value = savedFilename;
+      }
+    });
+
+    askBtn.addEventListener("click", async () => {
+      const apiBase = document.getElementById("apiBase").value.trim();
+      const userId = document.getElementById("userId").value.trim();
+      const documentId = document.getElementById("documentId").value.trim();
+      const source = document.getElementById("source").value.trim();
+      const query = document.getElementById("query").value.trim();
+
+      if (!userId) {
+        statusEl.textContent = "Please enter user_id.";
+        return;
+      }
+
+      if (!query) {
+        statusEl.textContent = "Please enter a question.";
+        return;
+      }
+
+      clearOutput();
+      statusEl.textContent = "Running retrieval graph...";
+      askBtn.disabled = true;
+      askBtn.textContent = "Asking...";
+
+      const payload = {
+        user_id: userId,
+        query: query
+      };
+
+      if (documentId) payload.document_id = documentId;
+      if (source) payload.source = source;
+
+      try {
+        const response = await fetch(`${apiBase}/api/v1/chat/ask`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          const errorText = await parseError(response);
+          statusEl.textContent = "Request failed.";
+          answerEl.textContent = errorText;
+          debugOutputEl.textContent = errorText;
+          return;
+        }
+
+        const data = await response.json();
+
+        statusEl.textContent = `Status: ${data.status || "unknown"}`;
+        answerEl.textContent = data.answer?.answer || "No answer returned.";
+        renderUsedChunks(data.answer?.used_chunks || []);
+        debugOutputEl.textContent = JSON.stringify(data, null, 2);
+
+      } catch (error) {
+        statusEl.textContent = "Request error.";
+        answerEl.textContent = error?.message || String(error);
+        debugOutputEl.textContent = error?.stack || String(error);
+      } finally {
+        askBtn.disabled = false;
+        askBtn.textContent = "Ask Question";
+      }
+    });
+
+    clearBtn.addEventListener("click", clearOutput);
+
+    backBtn.addEventListener("click", () => {
+      window.location.href = "process.html";
+    });
+  </script>
+</body>
+</html>
