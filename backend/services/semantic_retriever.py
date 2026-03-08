@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict, Any
 
-from backend.services.embedding_service import EmbeddingService
+from backend.services.ingestion.embedding_service import EmbeddingService
 
 
 class SemanticRetriever:

@@ -2,7 +2,7 @@ import re
 import uuid
 
 from fastapi import APIRouter, HTTPException, status
-from backend.models.users_model import UserCreate
+from backend.schemas.users_model import UserCreate
 from backend.clients.supabase_client import get_supabase_client
 
 user_router = APIRouter(

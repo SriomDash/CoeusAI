@@ -25,7 +25,8 @@ class Settings(BaseSettings):
 
     # --- Supabase Configuration ---
     SUPABASE_URL: str
-    SUPABASE_SERVICE_ROLE_KEY: str  
+    SUPABASE_SERVICE_ROLE_KEY: str
+    SUPABASE_SECRET_KEY: str
 
     # --- Cohere Configuration ---
     CO_API_KEY: str 

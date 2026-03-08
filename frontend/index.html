@@ -3,215 +3,330 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Coeus AI - User + Upload</title>
+  <title>Coeus AI - Upload</title>
   <style>
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f4f7fa;
-      color: #1e293b;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 24px;
     }
+
     .card {
       width: 100%;
-      max-width: 460px;
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 18px;
-      padding: 24px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      max-width: 420px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
+
     h1 {
       margin: 0 0 8px;
-      font-size: 24px;
+      font-size: 22px;
+      color: #f1f5f9;
     }
+
     p {
-      margin: 0 0 20px;
-      color: #64748b;
+      margin: 0 0 24px;
+      color: #94a3b8;
       font-size: 14px;
-      line-height: 1.5;
     }
+
     label {
       display: block;
-      margin-bottom: 6px;
-      font-size: 14px;
+      margin-bottom: 8px;
+      font-size: 13px;
       font-weight: 600;
+      color: #cbd5e1;
     }
+
     input {
       width: 100%;
-      padding: 12px 14px;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      margin-bottom: 16px;
+      padding: 12px;
+      border: 1px solid #475569;
+      border-radius: 12px;
+      margin-bottom: 20px;
       font-size: 14px;
+      background: #0f172a;
+      color: white;
       outline: none;
-      background: #fff;
     }
+
     input:focus {
-      border-color: #ea4e59;
-      box-shadow: 0 0 0 3px rgba(234, 78, 89, 0.12);
+      border-color: #38bdf8;
     }
+
     button {
       width: 100%;
-      border: none;
-      background: #ea4e59;
-      color: white;
-      padding: 12px 16px;
-      border-radius: 10px;
+      background: #38bdf8;
+      color: #0f172a;
+      padding: 14px;
+      border-radius: 12px;
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      margin-top: 10px;
     }
-    button:hover { background: #d9444f; }
+
+    button:hover {
+      background: #7dd3fc;
+      transform: translateY(-1px);
+    }
+
     button:disabled {
-      opacity: 0.7;
+      opacity: 0.5;
       cursor: not-allowed;
     }
-    .result {
-      margin-top: 16px;
-      padding: 12px;
-      border-radius: 10px;
-      font-size: 14px;
-      white-space: pre-wrap;
-      word-break: break-word;
+
+    .secondary-btn {
+      background: #22c55e;
+      color: #052e16;
       display: none;
     }
+
+    .secondary-btn:hover {
+      background: #4ade80;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      display: none;
+      white-space: pre-line;
+    }
+
     .success {
-      background: #ecfdf5;
-      color: #065f46;
-      border: 1px solid #a7f3d0;
+      background: #064e3b;
+      color: #34d399;
+      border: 1px solid #065f46;
     }
+
     .error {
-      background: #fef2f2;
-      color: #991b1b;
-      border: 1px solid #fecaca;
+      background: #450a0a;
+      color: #f87171;
+      border: 1px solid #7f1d1d;
     }
-    .hint {
-      margin-top: 12px;
-      color: #64748b;
-      font-size: 12px;
+
+    .info {
+      background: #082f49;
+      color: #7dd3fc;
+      border: 1px solid #0c4a6e;
     }
   </style>
 </head>
 <body>
+
   <div class="card">
-    <h1>User + Upload PDF</h1>
-    <p>Enter your name, upload a PDF, and move to the processing page.</p>
+    <h1>Coeus AI Ingestion</h1>
+    <p>Upload your document to start the RAG pipeline.</p>
 
     <form id="uploadForm">
-      <label for="userName">User Name</label>
+      <label for="userName">Full Name</label>
       <input id="userName" type="text" placeholder="e.g. Sriom Dash" required />
 
-      <label for="pdfFile">Choose PDF</label>
+      <label for="pdfFile">Document (PDF only, max 10MB)</label>
       <input id="pdfFile" type="file" accept="application/pdf" required />
 
-      <button id="submitBtn" type="submit">Save User and Upload PDF</button>
+      <button id="submitBtn" type="submit">Upload PDF</button>
     </form>
 
+    <button id="processBtn" class="secondary-btn" type="button">Process PDF</button>
+
     <div id="result" class="result"></div>
-    <div class="hint">Backend expected at http://127.0.0.1:8000/api/v1</div>
   </div>
 
   <script>
-    const API_V1 = "http://127.0.0.1:8000/api/v1";
+    const UPLOAD_API_URL = "http://127.0.0.1:8000/api/v1/upload";
+    const INGEST_API_URL = "http://127.0.0.1:8000/api/v1/ingest";
+
     const form = document.getElementById("uploadForm");
     const resultBox = document.getElementById("result");
     const submitBtn = document.getElementById("submitBtn");
+    const processBtn = document.getElementById("processBtn");
 
-    function showResult(message, ok) {
+    function showResult(type, message) {
+      resultBox.className = `result ${type}`;
       resultBox.style.display = "block";
-      resultBox.className = `result ${ok ? "success" : "error"}`;
       resultBox.textContent = message;
     }
 
-    async function parseError(response) {
-      try {
-        const data = await response.json();
-        if (typeof data?.detail === "string") return data.detail;
-        if (Array.isArray(data?.detail)) return JSON.stringify(data.detail, null, 2);
-        if (data?.message) return data.message;
-        return JSON.stringify(data, null, 2);
-      } catch {
-        return await response.text();
+    function setStoredJobUI() {
+      const userId = localStorage.getItem("user_id");
+      const documentId = localStorage.getItem("document_id");
+      const jobId = localStorage.getItem("job_id");
+
+      if (userId && documentId && jobId) {
+        processBtn.style.display = "block";
       }
     }
 
-    async function createUser(userName, userPdfName) {
-      const response = await fetch(`${API_V1}/users/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_name: userName,
-          user_pdf_name: userPdfName || null
-        })
-      });
+    function getErrorMessage(data, fallback) {
+      if (!data) return fallback;
 
-      if (!response.ok) {
-        throw new Error(await parseError(response));
-      }
+      if (typeof data.detail === "string") return data.detail;
+      if (data.detail && typeof data.detail.message === "string") return data.detail.message;
+      if (typeof data.message === "string") return data.message;
 
-      return await response.json();
-    }
-
-    async function uploadPdf(file, userId, userName) {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const url = new URL(`${API_V1}/ingest/upload`);
-      url.searchParams.set("user_id", userId);
-      url.searchParams.set("user_name", userName);
-
-      const response = await fetch(url.toString(), {
-        method: "POST",
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error(await parseError(response));
-      }
-
-      return await response.json();
+      return fallback;
     }
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
+
       submitBtn.disabled = true;
+      submitBtn.textContent = "Uploading...";
+      processBtn.style.display = "none";
+      resultBox.style.display = "none";
+
+      const userName = document.getElementById("userName").value.trim();
+      const file = document.getElementById("pdfFile").files[0];
+
+      const formData = new FormData();
+      formData.append("user_name", userName);
+      formData.append("file", file);
+
+      try {
+        const response = await fetch(UPLOAD_API_URL, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(getErrorMessage(data, "Upload failed"));
+        }
+
+        localStorage.setItem("user_id", data.user_id);
+        localStorage.setItem("document_id", data.document_id);
+        localStorage.setItem("job_id", data.job_id);
+
+        processBtn.style.display = "block";
+
+        if (data.already_exists) {
+          if (data.next_stage === "querying") {
+            showResult(
+              "info",
+              `This exact file already exists and is fully processed.
+User ID: ${data.user_id}
+Document ID: ${data.document_id}
+Job ID: ${data.job_id}
+Current Stage: ${data.job_status}
+Next Stage: Querying`
+            );
+          } else {
+            showResult(
+              "info",
+              `This exact file already exists. No duplicate file was uploaded.
+User ID: ${data.user_id}
+Document ID: ${data.document_id}
+Job ID: ${data.job_id}
+Current Stage: ${data.job_status}
+Next Stage: Resume Ingestion`
+            );
+          }
+        } else {
+          showResult(
+            "success",
+            `Upload successful!
+User ID: ${data.user_id}
+Document ID: ${data.document_id}
+Job ID: ${data.job_id}
+Current Stage: ${data.job_status}`
+          );
+        }
+
+        console.log("Upload Response:", data);
+
+      } catch (err) {
+        showResult("error", `Error: ${err.message}`);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Upload PDF";
+      }
+    });
+
+    processBtn.addEventListener("click", async () => {
+      const userId = localStorage.getItem("user_id");
+      const documentId = localStorage.getItem("document_id");
+      const jobId = localStorage.getItem("job_id");
+
+      if (!userId || !documentId || !jobId) {
+        showResult("error", "Missing user_id, document_id, or job_id in localStorage.");
+        return;
+      }
+
+      processBtn.disabled = true;
+      processBtn.textContent = "Processing...";
       resultBox.style.display = "none";
 
       try {
-        const userName = document.getElementById("userName").value.trim();
-        const file = document.getElementById("pdfFile").files[0];
+        const response = await fetch(INGEST_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            document_id: documentId,
+            job_id: jobId,
+          }),
+        });
 
-        if (!userName) throw new Error("Please enter user name.");
-        if (!file) throw new Error("Please select a PDF file.");
+        const data = await response.json();
 
-        const userData = await createUser(userName, file.name);
-        const userId = userData.user.user_id;
+        if (!response.ok) {
+          throw new Error(getErrorMessage(data, "Ingestion failed"));
+        }
 
-        localStorage.setItem("user_id", userId);
-        localStorage.setItem("user_name", userName);
+        if (data.graph_status === "done" && data.message?.includes("already been fully processed")) {
+          showResult(
+            "info",
+            `This document has already been fully processed.
+User ID: ${data.user_id}
+Document ID: ${data.document_id}
+Job ID: ${data.job_id}
+Current Stage: ${data.current_stage}
+Graph Status: ${data.graph_status}`
+          );
+        } else {
+          showResult(
+            "success",
+            `Ingestion completed!
+User ID: ${data.user_id}
+Document ID: ${data.document_id}
+Job ID: ${data.job_id}
+Current Stage: ${data.current_stage}
+Graph Status: ${data.graph_status}
+Chroma Count: ${data.chroma_count ?? 0}
+Elastic Count: ${data.elastic_count ?? 0}`
+          );
+        }
 
-        const uploadData = await uploadPdf(file, userId, userName);
-        localStorage.setItem("upload_id", uploadData.upload_id);
-        localStorage.setItem("filename", uploadData.filename || file.name);
+        console.log("Ingest Response:", data);
 
-        showResult("User saved and PDF uploaded successfully. Redirecting to processing page...", true);
-
-        setTimeout(() => {
-          window.location.href = "process.html";
-        }, 1000);
-
-      } catch (error) {
-        showResult(`Failed.\n\n${error.message}`, false);
+      } catch (err) {
+        showResult("error", `Error: ${err.message}`);
       } finally {
-        submitBtn.disabled = false;
+        processBtn.disabled = false;
+        processBtn.textContent = "Process PDF";
       }
     });
+
+    setStoredJobUI();
   </script>
 </body>
 </html>
